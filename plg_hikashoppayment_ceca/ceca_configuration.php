@@ -9,6 +9,7 @@
 defined('_JEXEC') or die('Restricted access');
 
 ?>
+
 <tr>
 	<td class="key">
 		<label for="data[payment][payment_params][status_url]">
@@ -20,6 +21,8 @@ defined('_JEXEC') or die('Restricted access');
 		<?php echo str_replace( '&', '&amp;',@$this->element->payment_params->status_url); ?>
 	</td>
 </tr>
+
+
 
 <tr>
 	<td class="key">
@@ -88,7 +91,16 @@ defined('_JEXEC') or die('Restricted access');
 		<?php echo JHTML::_('hikaselect.booleanlist', "data[payment][payment_params][debug]" , '',@$this->element->payment_params->debug	); ?>
 	</td>
 </tr>
-
+<tr>
+	<td class="key">
+		<label for="data[payment][payment_params][return_url]"><?php
+			echo JText::_('RETURN_URL');
+		?></label>
+	</td>
+	<td>
+		<input type="text" name="data[payment][payment_params][return_url]" value="<?php echo $this->escape(@$this->element->payment_params->return_url); ?>" />
+	</td>
+</tr>
 <tr>
 	<td class="key">
 		<label for="data[payment][payment_params][comunicacion_online_ok]">
