@@ -1,5 +1,6 @@
 <?php
 /**
+ * @package	HikaShop for Joomla!
  * @version	1.0.0
  * @author	ayudajoomla.com
  * @copyright	(C) 2013 Ayuda Joomla. All rights reserved.
@@ -11,9 +12,9 @@ class plgHikashoppaymentCeca extends JPlugin
 {
 	var $accepted_currencies = array(
 		'EUR'
+		//'EUR','CHF','USD','GBP','JPY','CAD','AUD'
 	);
 	var $debugData = array();
-
 	function onPaymentDisplay(&$order,&$methods,&$usable_methods){
 		if(!empty($methods)){
 			foreach($methods as $method){
@@ -28,6 +29,7 @@ class plgHikashoppaymentCeca extends JPlugin
 					return true;
 				}
 			}
+
 
 			$currencyClass = hikashop_get('class.currency');
 			$null=null;
@@ -51,6 +53,7 @@ class plgHikashoppaymentCeca extends JPlugin
 				return $usable_method;
 			}
 		}
+
 		return false;
 	}
 
@@ -63,6 +66,8 @@ class plgHikashoppaymentCeca extends JPlugin
 		$currencies = $currencyClass->getCurrencies($order->order_currency_id,$currencies);
 		$currency=$currencies[$order->order_currency_id];
 		$user = hikashop_loadUser(true);
+
+
 
 		$app = JFactory::getApplication();
 		$cart = hikashop_get('class.cart');
@@ -97,9 +102,11 @@ class plgHikashoppaymentCeca extends JPlugin
 		$locale=strtoupper(substr($lang->get('tag'),0,2));
 		if(!in_array($locale,array('EN', 'DE', 'ES', 'FR', 'IT', 'NL', 'PT'))) $locale = 'ES';
 		$vars["Idioma"]=$locale;
+		global $Itemid;
+		$vars["URL_OK"] = HIKASHOP_LIVE.'index.php?option=com_hikashop&ctrl=checkout&task=notify&notif_payment=ceca&done=ok&order_id='.$order->order_id.'&lang='.strtolower($locale).'&Itemid='.$Itemid;
+		$vars["URL_NOK"] = HIKASHOP_LIVE.'index.php?option=com_hikashop&ctrl=checkout&task=notify&notif_payment=ceca&done=nok&order_id='.$order->order_id.'&lang='.strtolower($locale).'&Itemid='.$Itemid;
 
-		$vars["URL_OK"] = HIKASHOP_LIVE.'index.php?option=com_hikashop&ctrl=checkout&task=notify&notif_payment=ceca&done=ok&order_id='.$order->order_id.'&lang='.strtolower($locale);
-		$vars["URL_NOK"] = HIKASHOP_LIVE.'index.php?option=com_hikashop&ctrl=checkout&task=notify&notif_payment=ceca&done=nok&order_id='.$order->order_id.'&lang='.strtolower($locale);
+
 
 		require($path);
 
@@ -122,10 +129,10 @@ class plgHikashoppaymentCeca extends JPlugin
 
 		if ($done == "ok")
 		{
-			$msg = JText::_('ORDER_IS_COMPLETE').'<br/>'.
-			JText::_('THANK_YOU_FOR_PURCHASE');
-
-			return $msg;
+			global $Itemid;
+			$return_url = HIKASHOP_LIVE.'index.php?option=com_hikashop&ctrl=checkout&task=after_end&order_id='.$requestOrderId . '&Itemid='.$Itemid;
+			$app = JFactory::getApplication();
+			$app->redirect($return_url);
 		}
 		elseif ($done == "nok")
 		{
@@ -140,6 +147,8 @@ class plgHikashoppaymentCeca extends JPlugin
 				$data = array();
 				$filter = JFilterInput::getInstance();
 
+
+
 				fwrite($fp, "VARIABLES QUE RECIBO DEL POST \t " . PHP_EOL);
 				foreach($_POST as $key => $value){
 					$key = $filter->clean($key);
@@ -148,8 +157,11 @@ class plgHikashoppaymentCeca extends JPlugin
 					fwrite($fp, "Clave y valor: $key \t $value" . PHP_EOL);
 				}
 
+
+
 				//compruebo que la firma es correcta
 				//cojo mi clave de encriptación de mis parámetros. Si firmo con ella los datos que me entregan y coincide con la firma que trae, entonces la transferencia es correcta.
+
 				$Clave=$element->payment_params->clave_encryp;
 				$MerchantID=$element->payment_params->merchant_id;
 				$AcquirerBIN=$element->payment_params->acquirer_bin;
@@ -161,6 +173,7 @@ class plgHikashoppaymentCeca extends JPlugin
 				$Referencia=$vars["Referencia"];
 
 				$Firma = sha1($Clave.$MerchantID.$AcquirerBIN.$TerminalID.$Num_operacion.$Importe.$TipoMoneda.$Exponente.$Referencia);
+
 
 					fwrite($fp, "VARIABLES QUE USO PARA FIRMAR \t " . PHP_EOL);
 					fwrite($fp, "Clave: $Clave \t " . PHP_EOL);
@@ -174,16 +187,25 @@ class plgHikashoppaymentCeca extends JPlugin
 					fwrite($fp, "Referencia: $Referencia \t $texto" . PHP_EOL);
 					fwrite($fp, "Firma: $Firma \t " . PHP_EOL);
 
+
 				$validaFirma = false;
 				if ($Firma==$vars["Firma"])
 				{
+
+
+
 					fwrite($fp, "ES BUENA $Firma \t ". PHP_EOL);
 					$validaFirma = true;
+
+
+
 				}
 				else
 				{
 					fwrite($fp, "ES MALA: $Firma \t " . PHP_EOL);
 					$validaFirma = false;
+
+
 				}
 
 				$validaPrecio = false;
@@ -195,19 +217,27 @@ class plgHikashoppaymentCeca extends JPlugin
 				$currencies = $currencyClass->getCurrencies($dbOrder->order_currency_id,$currencies);
 				$currency=$currencies[$dbOrder->order_currency_id];
 
+
 				$ImporteEntrada=(int)@$vars['Importe'];
 				$ImporteBD = round($dbOrder->order_full_price, (int)$currency->currency_locale['int_frac_digits']) * 100;
 
+
+
+
 				if ($ImporteEntrada == $ImporteBD){
 					$validaPrecio = true;
+
 				}
 				else
 				{
 					$validaPrecio = false;
+
 				}
+
 
 				if ($validaFirma && $validaPrecio)
 				{
+
 					$order = new stdClass();
 					$order->order_id = @$dbOrder->order_id;
 					if(!empty($dbOrder)){
@@ -217,6 +247,8 @@ class plgHikashoppaymentCeca extends JPlugin
 						fwrite($fp, "ORDER ID: $order->order_id \t " . PHP_EOL);
 
 					}
+
+
 
 					$order->history->history_reason=JText::sprintf('AUTOMATIC_PAYMENT_NOTIFICATION');
 					$order->history->history_notified=0;
@@ -230,21 +262,34 @@ class plgHikashoppaymentCeca extends JPlugin
 
 					fwrite($fp, "Verificado: $order->order_status \t " . PHP_EOL);
 
+
+
 					$orderClass->save($order);
+
 				}
+
 
 				if ($element->payment_params->respuesta_requerida)
 				{
 					$respuesta= '$*$OKY$*$';
 					return $respuesta;
+
+
 				}
+
+
+
 				fclose($fp);
 			}
 		}
+
+
+
 		return true;
 	}
 
 	function onPaymentConfiguration(&$element){
+
 		$this->ceca = JRequest::getCmd('name','ceca');
 		if(empty($element)){
 			$element = new stdClass();
@@ -259,7 +304,7 @@ class plgHikashoppaymentCeca extends JPlugin
 				$element = array($element);
 
 			}
-			$lang = &JFactory::getLanguage();
+			$lang = JFactory::getLanguage();
 		$locale=strtoupper(substr($lang->get('tag'),0,2));
 		$key = key($element);
 		$element[$key]->payment_params->status_url = HIKASHOP_LIVE.'index.php?option=com_hikashop&ctrl=checkout&task=notify&notif_payment=ceca&lang='.strtolower($locale);
@@ -277,9 +322,15 @@ class plgHikashoppaymentCeca extends JPlugin
 		$this->address = hikashop_get('type.address');
 		$this->category = hikashop_get('type.categorysub');
 		$this->category->type = 'status';
+
 	}
 
 	function onPaymentConfigurationSave(&$element){
+
 		return true;
 	}
+
+
+
+
 }
